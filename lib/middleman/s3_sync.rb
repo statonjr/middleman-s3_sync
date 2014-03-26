@@ -35,7 +35,7 @@ module Middleman
 
       def delete_files_in_bucket
         files = bucket_files.map{ |file| file.key }
-        say_status "Deleting #{files.count} files in #{bucket}..."
+        say_status "Deleting #{files.count} files in #{s3_sync_options.bucket}..."
         connection.delete_multiple_objects(s3_sync_options.bucket, files) unless files.empty?
       end
 
