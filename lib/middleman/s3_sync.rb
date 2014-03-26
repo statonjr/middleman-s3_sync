@@ -16,7 +16,9 @@ module Middleman
 
       def sync
         if s3_sync_options.nuke
-          delete_files_in_bucket
+          @files_to_create = local_paths.pmap(32) do |p|
+            S3Sync::Resource.new(p, "")
+          end
           create_resources
         end
 
@@ -31,12 +33,6 @@ module Middleman
         create_resources
         update_resources
         delete_resources
-      end
-
-      def delete_files_in_bucket
-        files = bucket_files.map{ |file| file.key }
-        say_status "Deleting #{files.count} files in #{s3_sync_options.bucket}..."
-        connection.delete_multiple_objects(s3_sync_options.bucket, files) unless files.empty?
       end
 
       def bucket
