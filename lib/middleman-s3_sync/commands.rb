@@ -36,7 +36,7 @@ module Middleman
         shared_inst.s3_sync_options.force = options[:force] if options[:force]
         shared_inst.s3_sync_options.bucket = options[:bucket] if options[:bucket]
         shared_inst.s3_sync_options.verbose = options[:verbose] if options[:verbose]
-        shared_inst.s3_sync_options.verbose = options[:nuke] if options[:nuke]
+        shared_inst.s3_sync_options.nuke = options[:nuke] if options[:nuke]
 
         ::Middleman::S3Sync.sync
       end
