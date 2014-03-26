@@ -1,10 +1,12 @@
 # Middleman::S3Sync
 
-[![Code Climate](https://codeclimate.com/github/fredjean/middleman-s3_sync.png)](https://codeclimate.com/github/fredjean/middleman-s3_sync) [![Build Status](https://travis-ci.org/fredjean/middleman-s3_sync.png?branch=master)](https://travis-ci.org/fredjean/middleman-s3_sync)
+[![Build Status](https://travis-ci.org/statonjr/middleman-s3_sync.png?branch=master)](https://travis-ci.org/statonjr/middleman-s3_sync)
 
 This gem determines which files need to be added, updated and optionally deleted
 and only transfer these files up. This reduces the impact of an update
 on a web site hosted on S3.
+
+This fork adds a `--nuke` option that deletes all the files in the specified bucket and uploads the files from the `build` directory. This option differs from the `--force` option in that it doesn't mark a page as to_update?
 
 ## Why not Middleman Sync?
 
@@ -39,7 +41,7 @@ activate :s3_sync do |s3_sync|
   s3_sync.aws_access_key_id          = 'AWS KEY ID'
   s3_sync.aws_secret_access_key      = 'AWS SECRET KEY'
   s3_sync.delete                     = false # We delete stray files by default.
-  s3_sync.after_build                = false # We do not chain after the build step by default. 
+  s3_sync.after_build                = false # We do not chain after the build step by default.
   s3_sync.prefer_gzip                = true
   s3_sync.path_style                 = true
   s3_sync.reduced_redundancy_storage = false
