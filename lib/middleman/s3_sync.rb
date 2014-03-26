@@ -15,6 +15,11 @@ module Middleman
       include Status
 
       def sync
+        if s3_sync_options.nuke
+          delete_files_in_bucket
+          create_resources
+        end
+
         unless work_to_be_done?
           say_status "\nAll S3 files are up to date."
           return
@@ -26,6 +31,12 @@ module Middleman
         create_resources
         update_resources
         delete_resources
+      end
+
+      def delete_files_in_bucket
+        files = connection.directories.get(bucket).files.map{ |file| file.key }
+        say_status "Deleting #{files.count} files in #{bucket}..."
+        fog.delete_multiple_objects(bucket, files) unless files.empty?
       end
 
       def bucket
@@ -77,7 +88,7 @@ module Middleman
       def remote_paths
         @remote_paths ||= bucket_files.map(&:key)
       end
-      
+
       def bucket_files
         @bucket_files ||= [].tap { |files|
           bucket.files.each { |f|
@@ -142,4 +153,3 @@ module Middleman
     end
   end
 end
-

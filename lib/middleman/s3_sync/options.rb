@@ -17,7 +17,8 @@ module Middleman
         :prefer_gzip,
         :reduced_redundancy_storage,
         :path_style,
-        :verbose
+        :verbose,
+        :nuke
 
       def initialize
         # read config from .s3_sync on initialization

@@ -21,6 +21,9 @@ module Middleman
       option :verbose, type: :boolean,
                        desc: "Adds more verbosity...",
                        aliases: :v
+      option :nuke, type: :boolean,
+                    desc: "Deletes all objects in bucket and uploads build",
+                    aliases: :n
 
       def s3_sync
         shared_inst = ::Middleman::Application.server.inst
@@ -33,6 +36,7 @@ module Middleman
         shared_inst.s3_sync_options.force = options[:force] if options[:force]
         shared_inst.s3_sync_options.bucket = options[:bucket] if options[:bucket]
         shared_inst.s3_sync_options.verbose = options[:verbose] if options[:verbose]
+        shared_inst.s3_sync_options.verbose = options[:nuke] if options[:nuke]
 
         ::Middleman::S3Sync.sync
       end
