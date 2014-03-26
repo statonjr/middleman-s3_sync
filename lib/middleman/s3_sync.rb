@@ -34,9 +34,9 @@ module Middleman
       end
 
       def delete_files_in_bucket
-        files = connection.directories.get(bucket).files.map{ |file| file.key }
+        files = bucket_files.map{ |file| file.key }
         say_status "Deleting #{files.count} files in #{bucket}..."
-        fog.delete_multiple_objects(bucket, files) unless files.empty?
+        connection.delete_multiple_objects(s3_sync_options.bucket, files) unless files.empty?
       end
 
       def bucket
