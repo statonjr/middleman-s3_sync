@@ -17,7 +17,7 @@ module Middleman
       def sync
         if s3_sync_options.nuke
           @files_to_create = local_paths.pmap(32) do |p|
-            S3Sync::Resource.new(p, "")
+            S3Sync::Resource.new(p, nil)
           end
           create_resources
         end
