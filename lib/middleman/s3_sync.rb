@@ -20,6 +20,8 @@ module Middleman
             S3Sync::Resource.new(p, nil)
           end
           create_resources
+          say_status "\nAll local files uploaded."
+          return
         end
 
         unless work_to_be_done?
