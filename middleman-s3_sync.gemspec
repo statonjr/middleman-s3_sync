@@ -6,11 +6,11 @@ require 'middleman/s3_sync/version'
 Gem::Specification.new do |gem|
   gem.name          = "middleman-s3_sync"
   gem.version       = Middleman::S3Sync::VERSION
-  gem.authors       = ["Frederic Jean", "Will Koehler"]
+  gem.authors       = ["Frederic Jean", "Will Koehler", "Larry Staton Jr."]
   gem.email         = ["fred@fredjean.net"]
   gem.description   = %q{Only syncs files that have been updated to S3.}
   gem.summary       = %q{Tries really, really hard not to push files to S3.}
-  gem.homepage      = "http://github.com/fredjean/middleman-s3_sync"
+  gem.homepage      = "http://github.com/statonjr/middleman-s3_sync"
   gem.license       = 'MIT'
 
   gem.files         = `git ls-files`.split($/)
@@ -26,11 +26,4 @@ Gem::Specification.new do |gem|
   gem.add_runtime_dependency 'ruby-progressbar'
   gem.add_runtime_dependency 'colorize'
 
-  gem.add_development_dependency 'rake'
-  gem.add_development_dependency 'pry'
-  gem.add_development_dependency 'pry-nav'
-  gem.add_development_dependency 'rspec'
-  gem.add_development_dependency 'timerizer'
-  gem.add_development_dependency 'travis'
-  gem.add_development_dependency 'travis-lint'
 end
