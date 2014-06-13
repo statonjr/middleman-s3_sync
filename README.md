@@ -47,6 +47,8 @@ activate :s3_sync do |s3_sync|
   s3_sync.reduced_redundancy_storage = false
   s3_sync.acl                        = 'public-read'
   s3_sync.encryption                 = false
+  s3_sync.prefix                     = ''
+  s3_sync.version_bucket             = false
 end
 ```
 
@@ -67,6 +69,7 @@ The following defaults apply to the configuration items:
 | path_style                 | ```true```                         |
 | encryption                 | ```false```                        |
 | acl                        | ```'public-read'```                |
+| version_bucket             | ```false```                        |
 
 You do not need to specify the settings that match the defaults. This
 simplify the configuration of the extension:
@@ -124,6 +127,27 @@ The command is:
 
     $ middleman s3_sync --bucket=my.new.bucket
 
+## Pushing to a folder within a bucket
+
+You can push to a folder within an S3 bucket by adding using the prefix
+option in the config block:
+
+```ruby
+activate :s3_sync do |s3_sync|
+  # ...
+  s3_sync.prefix = '/prefix'
+end
+```
+
+## Bucket Versioning
+
+You can enable bucket versioning by setting the ```version_bucket```
+setting to true within the bucket configuration.
+
+Versioning is enabled at the bucket level, not at the object level.
+
+You can [find out more about versioning here](https://aws.amazon.com/about-aws/whats-new/2010/02/08/versioning-feature-for-amazon-s3-now-available/).
+
 ## HTTP Caching
 
 By default, ```middleman-s3_sync``` does not set caching headers. In
@@ -147,7 +171,7 @@ As a result, the following ```Cache-Control``` header would be set to ```max-age
 
 ### Setting a Default Policy
 
-You can set the default policy by passing an options hash to ```default_caching_policy``` in your ```config.rb``` file:
+You can set the default policy by passing an options hash to ```default_caching_policy``` in your ```config.rb``` file after the ```activate :s3_sync ... end``` block:
 
 ```ruby
 default_caching_policy max_age:(60 * 60 * 24 * 365)

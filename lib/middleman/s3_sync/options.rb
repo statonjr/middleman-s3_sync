@@ -17,8 +17,9 @@ module Middleman
         :prefer_gzip,
         :reduced_redundancy_storage,
         :path_style,
-        :verbose,
-        :nuke
+        :nuke,
+        :version_bucket,
+        :verbose
 
       def initialize
         # read config from .s3_sync on initialization
@@ -79,6 +80,14 @@ module Middleman
 
       def path_style
         (@path_style.nil? ? true : @path_style)
+      end
+
+      def prefix
+        @prefix.nil? ? "" : "#{@prefix}/"
+      end
+
+      def version_bucket
+        @version_bucket.nil? ? false : @version_bucket
       end
 
       # Read config options from an IO stream and set them on `self`. Defaults

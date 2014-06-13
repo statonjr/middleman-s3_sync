@@ -31,6 +31,8 @@ module Middleman
 
         say_status "\nReady to apply updates to #{s3_sync_options.bucket}."
 
+        update_bucket_versioning
+
         ignore_resources
         create_resources
         update_resources
@@ -38,10 +40,14 @@ module Middleman
       end
 
       def bucket
-        @bucket ||= connection.directories.get(s3_sync_options.bucket)
+        @bucket ||= connection.directories.get(s3_sync_options.bucket, :prefix => s3_sync_options.prefix)
       end
 
       protected
+      def update_bucket_versioning
+        connection.put_bucket_versioning(s3_sync_options.bucket, "Enabled") if s3_sync_options.version_bucket
+      end
+
       def connection
         @connection ||= Fog::Storage.new({
           :provider => 'AWS',
@@ -55,7 +61,7 @@ module Middleman
       def resources
         @resources ||= paths.pmap(32) do |p|
           progress_bar.increment
-          S3Sync::Resource.new(p, bucket_files.find { |f| f.key == p }).tap(&:status)
+          S3Sync::Resource.new(p, bucket_files.find { |f| f.key == "#{s3_sync_options.prefix}#{p}" }).tap(&:status)
         end
       end
 
@@ -79,7 +85,7 @@ module Middleman
                              local_paths.reject! { |p| p =~ /\.gz$/ && File.exist?(p.gsub(/\.gz$/, '')) }
                            end
 
-                           local_paths.pmap(32) { |p| p.sub(/^#{build_dir}\//, '') }
+                           local_paths.pmap(32) { |p| p.gsub(/#{build_dir}\//, s3_sync_options.prefix) }
                          end
       end
 
