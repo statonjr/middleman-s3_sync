@@ -4,20 +4,28 @@ require 'map'
 module Middleman
   module S3Sync
     class << self
+      attr_accessor :options
+
       def registered(app, options_hash = {}, &block)
         options = Options.new
         yield options if block_given?
 
-        @@options = options
+        @options = options
 
         app.send :include, Helpers
 
+        app.define_hook :after_s3_sync
+
         app.after_configuration do |config|
+          # Record the http_prefix if it is set. We will need it while setting
+          # the options to detect whether it is set and adjust the prefix value
+          # accordingly
+          options.http_prefix = app.respond_to? :http_prefix ? app.http_prefix : nil
 
           # Define the after_build step after during configuration so
           # that it's pushed to the end of the callback chain
           app.after_build do |builder|
-            ::Middleman::S3Sync.sync if options.after_build
+            ::Middleman::S3Sync.sync(options) if options.after_build
           end
 
           options.build_dir ||= build_dir
@@ -26,7 +34,11 @@ module Middleman
       alias :included :registered
 
       def s3_sync_options
-        @@options
+        @options
+      end
+
+      def s3_sync_options=(options)
+        @options = options
       end
 
       module Helpers

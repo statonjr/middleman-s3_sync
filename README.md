@@ -89,6 +89,9 @@ There are a few ways to provide the AWS credentials for s3_sync:
 You can set the aws_access_key_id and aws_secret_access_key in the block
 that is passed to the activate method.
 
+> I strongly discourage using this method. This will lead you to add and commit these changes
+> to your SCM and potentially expose sensitive information to the world.
+
 #### Through ```.s3_sync``` File
 
 You can create a ```.s3_sync``` at the root of your middleman project.
@@ -100,6 +103,9 @@ activate method.
 
 A sample ```.s3_sync``` file is included at the root of this repo.
 
+> Make sure to add .s3_sync to your ignore list if you choose this approach. Not doing so may expose
+> credentials to the world.
+
 #### Through Environment
 
 You can also pass the credentials through environment variables. They
@@ -107,11 +113,36 @@ map to the following values:
 
 | Setting               | Environment Variable               |
 | --------------------- | ---------------------------------- |
-| aws_access_key_id     | ```ENV['AWS_ACCESS_KEY_ID```       |
+| aws_access_key_id     | ```ENV['AWS_ACCESS_KEY_ID']```     |
 | aws_secret_access_key | ```ENV['AWS_SECRET_ACCESS_KEY']``` |
 
 The environment is used when the credentials are not set in the activate
 method or passed through the ```.s3_sync``` configuration file.
+
+### IAM Policy
+
+Here's a sample IAM policy that will allow a user to update the site
+contained in a bucket named "mysite.com":
+
+```
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "s3:*",
+      "Resource": "arn:aws:s3:::mysite.com"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "s3:*",
+      "Resource": "arn:aws:s3:::mysite.com/*"
+    }
+  ]
+}
+```
+
+This will give full access to both the bucket and it's contents.
 
 ## Push All Content to S3
 
@@ -250,7 +281,8 @@ You can set the ```prefer_gzip``` option to look for a gzipped version
 of a resource. The gzipped version of the resource will be pushed to S3
 instead of the original and the ```Content-Encoding``` and ```Content-Type```
 headers will be set correctly. This will cause Amazon to serve the
-compressed version of the resource.
+compressed version of the resource. In order for this to work, you need to
+have the `:gzip` extension activated in your `config.rb`.
 
 ## A Debt of Gratitude
 

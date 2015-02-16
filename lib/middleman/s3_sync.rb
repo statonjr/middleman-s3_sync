@@ -14,8 +14,12 @@ module Middleman
     class << self
       include Status
 
-      def sync
-        if s3_sync_options.nuke
+      def sync(options)
+        @app = ::Middleman::Application.server.inst
+
+        self.s3_sync_options = options
+
+        if options.nuke
           @files_to_create = local_paths.pmap(32) do |p|
             S3Sync::Resource.new(p, nil).tap(&:status)
           end
@@ -37,10 +41,19 @@ module Middleman
         create_resources
         update_resources
         delete_resources
+
+        @app.run_hook :after_s3_sync, ignored: files_to_ignore.map(&:path),
+                                      created: files_to_create.map(&:path),
+                                      updated: files_to_update.map(&:path),
+                                      deleted: files_to_delete.map(&:path)
       end
 
       def bucket
-        @bucket ||= connection.directories.get(s3_sync_options.bucket, :prefix => s3_sync_options.prefix)
+        @bucket ||= begin
+                      bucket = connection.directories.get(s3_sync_options.bucket, :prefix => s3_sync_options.prefix)
+                      raise "Bucket #{s3_sync_options.bucket} doesn't exist!" unless bucket
+                      bucket
+                    end
       end
 
       protected
@@ -72,7 +85,7 @@ module Middleman
       def paths
         @paths ||= begin
                      say_status "Gathering the paths to evaluate."
-                     (remote_paths + local_paths).uniq.sort
+                     (remote_paths.map { |rp| rp.gsub(/^#{s3_sync_options.prefix}/, '')} + local_paths).uniq.sort
                    end
       end
 
@@ -85,7 +98,7 @@ module Middleman
                              local_paths.reject! { |p| p =~ /\.gz$/ && File.exist?(p.gsub(/\.gz$/, '')) }
                            end
 
-                           local_paths.pmap(32) { |p| p.gsub(/#{build_dir}\//, s3_sync_options.prefix) }
+                           local_paths.pmap(32) { |p| p.gsub(/#{build_dir}\//, '') }
                          end
       end
 
@@ -142,8 +155,6 @@ module Middleman
       end
 
       def files_to_update
-        return resources.select { |r| r.local? && !r.to_ignore? } if s3_sync_options.force
-
         @files_to_update ||= resources.select { |r| r.to_update? }
       end
 

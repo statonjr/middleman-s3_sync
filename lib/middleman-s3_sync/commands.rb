@@ -1,10 +1,12 @@
 require 'middleman-core/cli'
-require 'middleman-s3_sync/extension'
 
 module Middleman
   module Cli
     class S3Sync < Thor
       include Thor::Actions
+
+      check_unknown_options!
+
       namespace :s3_sync
 
       def self.exit_on_failure?
@@ -12,34 +14,39 @@ module Middleman
       end
 
       desc "s3_sync", "Pushes the minimum set of files needed to S3"
-      option :force, type: :boolean,
+
+      method_option :force, type: :boolean,
                      desc: "Push all local files to the server",
-                     aliases: :f
-      option :bucket, type: :string,
+                     aliases: "-f"
+      method_option :bucket, type: :string,
                       desc: "Specify which bucket to use, overrides the configured bucket.",
-                      aliases: :b
-      option :verbose, type: :boolean,
+                      aliases: "-b"
+      method_option :verbose, type: :boolean,
                        desc: "Adds more verbosity...",
-                       aliases: :v
-      option :nuke, type: :boolean,
+                       aliases: "-v"
+      method_option :nuke, type: :boolean,
                     desc: "Deletes all objects in bucket and uploads build",
-                    aliases: :n
+                    aliases: "-n"
 
       def s3_sync
         shared_inst = ::Middleman::Application.server.inst
         bucket = shared_inst.s3_sync_options.bucket rescue nil
         unless bucket
-          raise Thor::Error.new "You need to activate the s3_sync extension."
+          raise Thor::Error.new "You need to activate the s3_sync extension and at least provide the bucket name."
         end
 
-        # Override options based on what was passed on the command line...
-        shared_inst.s3_sync_options.force = options[:force] if options[:force]
-        shared_inst.s3_sync_options.bucket = options[:bucket] if options[:bucket]
-        shared_inst.s3_sync_options.verbose = options[:verbose] if options[:verbose]
-        shared_inst.s3_sync_options.nuke = options[:nuke] if options[:nuke]
+        s3_sync_options = shared_inst.s3_sync_options
 
-        ::Middleman::S3Sync.sync
+        # Override options based on what was passed on the command line...
+
+        s3_sync_options.force = options[:force] if options[:force]
+        s3_sync_options.bucket = options[:bucket] if options[:bucket]
+        s3_sync_options.verbose = options[:verbose] if options[:verbose]
+        s3_sync_options.nuke = options[:nuke] if options[:nuke]
+
+        ::Middleman::S3Sync.sync(s3_sync_options)
       end
     end
+    Base.map('sync' => 's3_sync')
   end
 end

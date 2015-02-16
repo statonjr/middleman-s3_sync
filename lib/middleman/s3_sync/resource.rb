@@ -1,11 +1,16 @@
 module Middleman
   module S3Sync
     class Resource
-      attr_accessor :path, :partial_s3_resource, :content_type, :gzipped
+      attr_accessor :path, :partial_s3_resource, :full_s3_resource, :content_type, :gzipped, :options
 
       CONTENT_MD5_KEY = 'x-amz-meta-content-md5'
 
       include Status
+
+      def initialize(path, partial_s3_resource)
+        @path = path
+        @partial_s3_resource = partial_s3_resource
+      end
 
       def s3_resource
         @full_s3_resource || @partial_s3_resource
@@ -13,16 +18,11 @@ module Middleman
 
       # S3 resource as returned by a HEAD request
       def full_s3_resource
-        @full_s3_resource ||= bucket.files.head("#{options.prefix}#{path}")
-      end
-
-      def initialize(path, partial_s3_resource)
-        @path = path
-        @partial_s3_resource = partial_s3_resource
+        @full_s3_resource ||= bucket.files.head(remote_path)
       end
 
       def remote_path
-        s3_resource ? s3_resource.key : path
+        s3_resource ? s3_resource.key : "#{options.prefix}#{path}"
       end
       alias :key :remote_path
 
@@ -56,64 +56,33 @@ module Middleman
       alias :attributes :to_h
 
       def update!
-        body { |body|
-          say_status "Updating".blue + " #{path}#{ gzipped ? ' (gzipped)'.white : ''}"
-          if options.verbose
-            say_status "Original:    #{original_path.white}"
-            say_status "Local Path:  #{local_path.white}"
-            say_status "remote md5:  #{remote_object_md5.white} / #{remote_content_md5}"
-            say_status "content md5: #{local_object_md5.white} / #{local_content_md5}"
-          end
+        local_content { |body|
+          say_status ANSI.blue{"Updating"} + " #{remote_path}#{ gzipped ? ANSI.white {' (gzipped)'} : ''}"
+          s3_resource.merge_attributes(to_h)
           s3_resource.body = body
-
-          s3_resource.acl = options.acl
-          s3_resource.content_type = content_type
-          s3_resource.metadata = { CONTENT_MD5_KEY => local_content_md5 }
-
-          if caching_policy
-            s3_resource.cache_control = caching_policy.cache_control
-            s3_resource.expires = caching_policy.expires
-          end
-
-          if options.prefer_gzip && gzipped
-            s3_resource.content_encoding = "gzip"
-          end
-
-          if options.reduced_redundancy_storage
-            s3_resource.storage_class = 'REDUCED_REDUNDANCY'
-          end
-
-          if options.encryption
-            s3_resource.encryption = 'AES256'
-          end
 
           s3_resource.save
         }
       end
 
       def local_path
-        local_path = build_dir + '/' + path
+        local_path = build_dir + '/' + path.gsub(/^#{options.prefix}/, '')
         if options.prefer_gzip && File.exist?(local_path + ".gz")
           @gzipped = true
           local_path += ".gz"
         end
-        local_path.sub(options.prefix, '')
+        local_path
       end
 
       def destroy!
-        say_status "Deleting".red + " #{path}"
+        say_status ANSI.red { "Deleting" } + " " + remote_path
         bucket.files.destroy remote_path
       end
 
       def create!
-        say_status "Creating".green + " #{path}#{ gzipped ? ' (gzipped)'.white : ''}"
-        if options.verbose
-          say_status "Original:    #{original_path.white}"
-          say_status "Local Path:  #{local_path.white}"
-          say_status "content md5: #{local_content_md5.white}"
-        end
-        body { |body|
-          bucket.files.create(to_h.merge(:body => body))
+        say_status ANSI.green { "Creating" } + " #{remote_path}#{ gzipped ? ANSI.white {' (gzipped)'} : ''}"
+        local_content { |body|
+          bucket.files.create(to_h.merge(body: body))
         }
       end
 
@@ -122,10 +91,10 @@ module Middleman
                    :redirect
                  elsif directory?
                    :directory
-                 elsif alternate_encoding?
-                   'alternate encoding'
                  end
-        say_status "Ignoring".yellow + " #{path} #{ reason ? "(#{reason})".white : "" }"
+        if options.verbose
+          say_status ANSI.yellow {"Ignoring"} + " #{remote_path} #{ reason ? ANSI.white {"(#{reason})" } : "" }"
+        end
       end
 
       def to_delete?
@@ -152,7 +121,7 @@ module Middleman
         status == :ignored || status == :alternate_encoding
       end
 
-      def body(&block)
+      def local_content(&block)
         File.open(local_path, &block)
       end
 
@@ -164,16 +133,16 @@ module Middleman
                         :ignored
                       end
                     elsif local? && remote?
-                      if local_object_md5 == remote_object_md5
+                      if options.force
+                        :updated
+                      elsif local_object_md5 == remote_object_md5
                         :identical
                       else
                         if !gzipped
                           # we're not gzipped, object hashes being different indicates updated content
                           :updated
-                        elsif local_content_md5 != remote_content_md5
+                        elsif !encoding_match? || local_content_md5 != remote_content_md5
                           # we're gzipped, so we checked the content MD5, and it also changed
-                          :updated
-                        elsif !encoding_match?
                           :updated
                         else
                           # we're gzipped, the object hashes differ, but the content hashes are equal
@@ -196,7 +165,7 @@ module Middleman
       end
 
       def remote?
-        s3_resource
+        !!s3_resource
       end
 
       def redirect?
@@ -216,7 +185,7 @@ module Middleman
       end
 
       def encoding_match?
-        (gzipped && full_s3_resource.content_encoding == 'gzip') || (!gzipped && !full_s3_resource.content_encoding )
+        (options.prefer_gzip && gzipped && full_s3_resource.content_encoding == 'gzip') || (!options.prefer_gzip && !gzipped && !full_s3_resource.content_encoding )
       end
 
       def remote_content_md5
@@ -253,7 +222,7 @@ module Middleman
       end
 
       def options
-        Middleman::S3Sync.s3_sync_options
+        @options || Middleman::S3Sync.s3_sync_options
       end
     end
   end
